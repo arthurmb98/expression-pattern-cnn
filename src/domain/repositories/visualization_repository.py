@@ -27,6 +27,19 @@ class VisualizationRepository(ABC):
         pass
     
     @abstractmethod
+    def plot_test_images_without_gradcam(
+        self,
+        images: np.ndarray,
+        true_labels: np.ndarray,
+        pred_labels: np.ndarray,
+        class_names: List[str],
+        save_path: str,
+        num_images: int = 9
+    ):
+        """Plota imagens de teste sem overlays Grad-CAM."""
+        pass
+    
+    @abstractmethod
     def plot_confusion_matrix(
         self,
         y_true: np.ndarray,
@@ -35,4 +48,14 @@ class VisualizationRepository(ABC):
         save_path: str
     ):
         """Plota matriz de confusão."""
+        pass
+    
+    @abstractmethod
+    def print_class_accuracy_summary(
+        self,
+        y_true: np.ndarray,
+        y_pred: np.ndarray,
+        class_names: List[str]
+    ):
+        """Imprime resumo de acerto por classe e geral."""
         pass

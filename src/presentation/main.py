@@ -146,11 +146,11 @@ def main():
         print(f"\n{'='*60}")
         print("RESULTADOS DO TREINAMENTO")
         print(f"{'='*60}")
-        print(f"Acurácia de treino: {training_result.accuracy:.4f}")
-        print(f"Loss de treino: {training_result.loss:.4f}")
-        print(f"Acurácia de teste: {training_result.validation_accuracy:.4f}")
-        print(f"Loss de teste: {training_result.validation_loss:.4f}")
-        print(f"Modelo salvo em: {training_result.model_path}")
+        print(f"✓ Acurácia de treino:   {training_result.accuracy:.4f} ({training_result.accuracy*100:.2f}%)")
+        print(f"✓ Loss de treino:       {training_result.loss:.4f}")
+        print(f"✓ Acurácia de teste:     {training_result.validation_accuracy:.4f} ({training_result.validation_accuracy*100:.2f}%)")
+        print(f"✓ Loss de teste:        {training_result.validation_loss:.4f}")
+        print(f"✓ Modelo salvo em:      {training_result.model_path}")
         print(f"{'='*60}\n")
         
         # Caso de uso: Visualizar resultados
@@ -168,13 +168,14 @@ def main():
         )
         
         print(f"\n{'='*60}")
-        print("PROCESSO CONCLUÍDO COM SUCESSO!")
+        print("✅ PROCESSO CONCLUÍDO COM SUCESSO!")
         print(f"{'='*60}")
-        print(f"Resultados salvos em:")
-        print(f"  - Histórico de treinamento: results/training_history.png")
-        print(f"  - Matriz de confusão: results/confusion_matrix.png")
-        print(f"  - Imagens com Grad-CAM: results/test_images_gradcam.png")
-        print(f"{'='*60}\n")
+        print(f"\n📁 Arquivos gerados:")
+        print(f"  ✓ Histórico de treinamento:  results/training_history.png")
+        print(f"  ✓ Matriz de confusão:       results/confusion_matrix.png")
+        print(f"  ✓ Imagens de teste:         results/test_images_gradcam.png")
+        print(f"  ✓ Modelo treinado:          models/cnn_model.h5")
+        print(f"\n{'='*60}\n")
         
     except Exception as e:
         print(f"\n❌ Erro: {e}", file=sys.stderr)

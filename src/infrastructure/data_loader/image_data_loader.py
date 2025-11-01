@@ -2,7 +2,10 @@ import os
 from typing import List, Tuple
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFile
+
+# Habilita carregamento de imagens truncadas
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 from src.domain.repositories.data_loader_repository import DataLoaderRepository
 
@@ -38,23 +41,55 @@ class ImageDataLoader(DataLoaderRepository):
             return np.array([]), np.array([])
         
         for filename in os.listdir(folder_path):
-            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
-                img_path = os.path.join(folder_path, filename)
-                try:
-                    # Carrega e redimensiona a imagem
-                    img = Image.open(img_path).convert('RGB')
-                    img = img.resize(image_size)
-                    img_array = np.array(img) / 255.0  # Normaliza entre 0 e 1
-                    
-                    images.append(img_array)
-                    
-                    # Cria label one-hot
-                    label = np.zeros(num_classes)
-                    label[class_idx] = 1
-                    labels.append(label)
-                except Exception as e:
-                    print(f"Erro ao carregar imagem {img_path}: {e}")
+            # Verifica extensões JPEG e PNG (case-insensitive)
+            filename_lower = filename.lower()
+            if not filename_lower.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+                continue
+                
+            img_path = os.path.join(folder_path, filename)
+            
+            # Verifica se é um arquivo válido e não está vazio
+            try:
+                if not os.path.isfile(img_path) or os.path.getsize(img_path) == 0:
                     continue
+            except:
+                continue
+            
+            try:
+                # Carrega imagem com tratamento para imagens truncadas
+                # O ImageFile.LOAD_TRUNCATED_IMAGES já foi definido no topo do módulo
+                img = Image.open(img_path)
+                
+                # Força o carregamento completo da imagem
+                img.load()
+                
+                # Converte para RGB (necessário para JPEG com canais diferentes)
+                img = img.convert('RGB')
+                
+                # Verifica se a imagem tem tamanho válido
+                if img.size[0] == 0 or img.size[1] == 0:
+                    print(f"Aviso: Imagem com tamanho inválido ignorada: {img_path}")
+                    continue
+                
+                # Redimensiona a imagem
+                img = img.resize(image_size, Image.Resampling.LANCZOS)
+                img_array = np.array(img) / 255.0  # Normaliza entre 0 e 1
+                
+                # Verifica se o array tem as dimensões corretas
+                if img_array.shape != (*image_size, 3):
+                    print(f"Aviso: Imagem com dimensões incorretas ignorada: {img_path}")
+                    continue
+                
+                images.append(img_array)
+                
+                # Cria label one-hot
+                label = np.zeros(num_classes)
+                label[class_idx] = 1
+                labels.append(label)
+                
+            except Exception as e:
+                print(f"Aviso: Erro ao carregar imagem {filename}: {str(e)[:100]}")
+                continue
         
         return np.array(images), np.array(labels)
     
