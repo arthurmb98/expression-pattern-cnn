@@ -115,6 +115,97 @@ class ResultVisualizer(VisualizationRepository):
         
         print(f"✓ Imagens com Grad-CAM salvas em: {save_path}")
     
+    def plot_test_images_with_dual_gradcam(
+        self,
+        images: np.ndarray,
+        true_labels: np.ndarray,
+        pred_labels: np.ndarray,
+        class_names: List[str],
+        heatmaps_pred: np.ndarray,
+        heatmaps_true: np.ndarray,
+        save_path: str,
+        num_images: int = 9
+    ):
+        """Plota imagens de teste com overlays Grad-CAM duplos:
+        - Vermelho: regiões que fazem o modelo classificar como classe predita
+        - Verde: regiões que fazem a imagem pertencer à classe verdadeira"""
+        # Calcula grid size
+        n_cols = 3
+        n_rows = (num_images + n_cols - 1) // n_cols
+        
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 5 * n_rows))
+        axes = axes.flatten() if n_rows > 1 else [axes] if n_rows == 1 else axes
+        
+        for i in range(num_images):
+            if i >= len(images):
+                axes[i].axis('off')
+                continue
+            
+            image = images[i]
+            heatmap_pred = heatmaps_pred[i]  # Heatmap da classe predita (vermelho)
+            heatmap_true = heatmaps_true[i]  # Heatmap da classe verdadeira (verde)
+            true_label = true_labels[i]
+            pred_label = pred_labels[i]
+            
+            # Normaliza os heatmaps para valores entre 0 e 1
+            heatmap_pred_norm = heatmap_pred.astype(np.float32) / 255.0
+            heatmap_true_norm = heatmap_true.astype(np.float32) / 255.0
+            
+            # Aplica threshold para destacar apenas as regiões mais importantes
+            threshold = 0.3
+            heatmap_pred_norm = np.where(heatmap_pred_norm > threshold, heatmap_pred_norm, 0)
+            heatmap_true_norm = np.where(heatmap_true_norm > threshold, heatmap_true_norm, 0)
+            
+            # Cria overlays coloridos mais vibrantes
+            # Vermelho para classe predita
+            overlay_pred = np.zeros_like(image)
+            overlay_pred[:, :, 0] = heatmap_pred_norm * 1.2  # Canal vermelho intensificado
+            overlay_pred[:, :, 1] = heatmap_pred_norm * 0.2  # Pouco verde
+            overlay_pred[:, :, 2] = heatmap_pred_norm * 0.1  # Muito pouco azul
+            
+            # Verde para classe verdadeira
+            overlay_true = np.zeros_like(image)
+            overlay_true[:, :, 0] = heatmap_true_norm * 0.2  # Pouco vermelho
+            overlay_true[:, :, 1] = heatmap_true_norm * 1.2  # Canal verde intensificado
+            overlay_true[:, :, 2] = heatmap_true_norm * 0.1  # Muito pouco azul
+            
+            # Combina imagem original com ambos os overlays
+            # A imagem original fica visível para contexto, mas os overlays destacam
+            overlayed = image * 0.6 + np.clip(overlay_pred, 0, 1) * 0.4 + np.clip(overlay_true, 0, 1) * 0.4
+            overlayed = np.clip(overlayed, 0, 1)  # Garante valores entre 0 e 1
+            
+            # Plota
+            axes[i].imshow(overlayed)
+            axes[i].axis('off')
+            
+            # Adiciona título com informações
+            true_class = class_names[true_label] if true_label < len(class_names) else f"Classe {true_label}"
+            pred_class = class_names[pred_label] if pred_label < len(class_names) else f"Classe {pred_label}"
+            
+            color = 'green' if true_label == pred_label else 'red'
+            title = f"Verdadeiro: {true_class}\nPredito: {pred_class}\n🔴Vermelho=Predita | 🟢Verde=Verdadeira"
+            axes[i].set_title(title, fontsize=9, color=color, fontweight='bold')
+        
+        # Remove eixos vazios
+        for i in range(num_images, len(axes)):
+            axes[i].axis('off')
+        
+        plt.tight_layout()
+        
+        import os
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        
+        # Exibe o gráfico na tela
+        print(f"\n📊 Exibindo imagens de teste com Grad-CAM duplo...")
+        print(f"   🔴 Vermelho: Regiões da classe PREDITA")
+        print(f"   🟢 Verde: Regiões da classe VERDADEIRA")
+        print(f"   (Feche a janela para continuar)")
+        plt.show(block=True)
+        plt.close()
+        
+        print(f"✓ Imagens com Grad-CAM duplo salvas em: {save_path}")
+    
     def plot_test_images_without_gradcam(
         self,
         images: np.ndarray,

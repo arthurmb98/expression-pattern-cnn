@@ -82,17 +82,32 @@ data/
 
 ## Uso
 
-### Exemplo Básico
+### Comando Principal (Recomendado)
+
+O comando mais simples para rodar a aplicação com todos os valores padrão:
 
 ```bash
-python -m src.presentation.main \
-    --train_path data/train \
-    --test_path data/test \
-    --epochs 50 \
-    --batch_size 32
+python -m src.presentation.main
 ```
 
-### Exemplo Completo
+ou no macOS/Linux:
+
+```bash
+python3 -m src.presentation.main
+```
+
+**Valores padrão usados:**
+- Diretório de treinamento: `data/train`
+- Diretório de teste: `data/test`
+- Épocas: 50
+- Batch size: 32
+- Tamanho da imagem: 224x224
+- Learning rate: 0.001
+- Número de imagens para visualização: 9
+
+### Personalizando os Parâmetros
+
+Se você quiser personalizar algum parâmetro, pode especificá-los:
 
 ```bash
 python -m src.presentation.main \
@@ -100,15 +115,32 @@ python -m src.presentation.main \
     --test_path data/test \
     --epochs 100 \
     --batch_size 64 \
-    --image_size 224 224 \
-    --learning_rate 0.001 \
-    --num_images_to_plot 9
+    --learning_rate 0.0001
+```
+
+### Exemplos Adicionais
+
+**Exemplo com mais épocas:**
+```bash
+python -m src.presentation.main --epochs 100
+```
+
+**Exemplo com batch size maior:**
+```bash
+python -m src.presentation.main --batch_size 64 --epochs 50
+```
+
+**Exemplo com caminhos customizados:**
+```bash
+python -m src.presentation.main \
+    --train_path meu_diretorio/train \
+    --test_path meu_diretorio/test
 ```
 
 ### Parâmetros
 
-- `--train_path`: Caminho para o diretório de treinamento (obrigatório)
-- `--test_path`: Caminho para o diretório de teste (obrigatório)
+- `--train_path`: Caminho para o diretório de treinamento (default: `data/train`)
+- `--test_path`: Caminho para o diretório de teste (default: `data/test`)
 - `--epochs`: Número de épocas de treinamento (default: 50)
 - `--batch_size`: Tamanho do batch (default: 32)
 - `--image_size`: Tamanho das imagens altura largura (default: 224 224)

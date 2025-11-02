@@ -1,14 +1,17 @@
 #!/bin/bash
 # Exemplo de uso do projeto CNN para classificação de imagens
 
-# Exemplo básico
-python -m src.presentation.main \
-    --train_path data/train \
-    --test_path data/test \
-    --epochs 50 \
-    --batch_size 32
+# Comando mais simples - usa todos os valores padrão
+python -m src.presentation.main
 
-# Exemplo com mais opções
+# Exemplo com valores padrão explícitos
+# python -m src.presentation.main \
+#     --train_path data/train \
+#     --test_path data/test \
+#     --epochs 50 \
+#     --batch_size 32
+
+# Exemplo com opções customizadas
 # python -m src.presentation.main \
 #     --train_path data/train \
 #     --test_path data/test \

@@ -150,36 +150,53 @@ class VisualizeResultsUseCase:
         selected_true = true_classes[selected_indices]
         selected_pred = pred_classes[selected_indices]
         
-        heatmaps = []
+        heatmaps_pred = []  # Heatmaps para classe predita (vermelho)
+        heatmaps_true = []  # Heatmaps para classe verdadeira (verde)
         gradcam_success = True
+        
         for i, image in enumerate(selected_images):
             try:
-                class_idx = selected_pred[i]
-                heatmap = self.model_repository.get_gradcam_heatmap(
+                # Gera heatmap para a classe predita (vermelho)
+                pred_class_idx = selected_pred[i]
+                heatmap_pred = self.model_repository.get_gradcam_heatmap(
                     image,
-                    class_idx
+                    pred_class_idx
                 )
-                heatmaps.append(heatmap)
+                heatmaps_pred.append(heatmap_pred)
+                
+                # Gera heatmap para a classe verdadeira (verde)
+                true_class_idx = selected_true[i]
+                heatmap_true = self.model_repository.get_gradcam_heatmap(
+                    image,
+                    true_class_idx
+                )
+                heatmaps_true.append(heatmap_true)
+                
             except Exception as e:
                 print(f"Aviso: Erro ao gerar Grad-CAM para imagem {i}: {e}")
                 gradcam_success = False
-                # Cria um heatmap vazio para manter o tamanho consistente
-                heatmaps.append(np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8))
+                # Cria heatmaps vazios para manter o tamanho consistente
+                img_h, img_w = image.shape[0], image.shape[1]
+                heatmaps_pred.append(np.zeros((img_h, img_w), dtype=np.uint8))
+                heatmaps_true.append(np.zeros((img_h, img_w), dtype=np.uint8))
         
         if not gradcam_success:
             print("Aviso: Alguns heatmaps Grad-CAM falharam. Gerando visualização sem overlay.")
-            heatmaps = None
+            heatmaps_pred = None
+            heatmaps_true = None
         else:
-            heatmaps = np.array(heatmaps)
+            heatmaps_pred = np.array(heatmaps_pred)
+            heatmaps_true = np.array(heatmaps_true)
         
         # Plota imagens com ou sem Grad-CAM
-        if heatmaps is not None:
-            self.visualization_repository.plot_test_images_with_gradcam(
+        if heatmaps_pred is not None and heatmaps_true is not None:
+            self.visualization_repository.plot_test_images_with_dual_gradcam(
                 selected_images,
                 selected_true,
                 selected_pred,
                 classes,
-                heatmaps,
+                heatmaps_pred,  # Vermelho - classe predita
+                heatmaps_true,  # Verde - classe verdadeira
                 save_path="results/test_images_gradcam.png",
                 num_images=len(selected_images)
             )

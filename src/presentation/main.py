@@ -53,14 +53,14 @@ def main():
     parser.add_argument(
         '--train_path',
         type=str,
-        required=True,
-        help='Caminho para o diretório de treinamento (deve conter subpastas com nomes das classes)'
+        default='data/train',
+        help='Caminho para o diretório de treinamento (deve conter subpastas com nomes das classes) (default: data/train)'
     )
     parser.add_argument(
         '--test_path',
         type=str,
-        required=True,
-        help='Caminho para o diretório de teste (deve conter subpastas com mesmos nomes das classes)'
+        default='data/test',
+        help='Caminho para o diretório de teste (deve conter subpastas com mesmos nomes das classes) (default: data/test)'
     )
     parser.add_argument(
         '--epochs',
