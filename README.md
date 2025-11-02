@@ -25,7 +25,8 @@ expression-pattern-cnn/
 │   │   ├── models/             # Implementação do modelo CNN
 │   │   └── visualization/      # Implementação do visualizador
 │   └── presentation/           # Camada de apresentação
-│       └── main.py             # CLI principal
+│       ├── main.py             # CLI principal (treinamento)
+│       └── classify_image.py  # Interface gráfica para classificação
 ├── requirements.txt
 └── README.md
 ```
@@ -184,6 +185,49 @@ Isso permite:
 - Testabilidade
 - Manutenibilidade
 - Baixo acoplamento
+
+## 🖼️ Classificação de Imagens Individuais
+
+Após treinar o modelo, você pode usar uma interface gráfica para classificar imagens individuais:
+
+```bash
+python3 -m src.presentation.classify_image
+```
+
+### Funcionalidades
+
+1. **Carregamento Automático do Modelo**: Carrega automaticamente o modelo treinado (`models/cnn_model.h5`)
+2. **Resumo do Modelo**: Exibe as métricas de performance do modelo (acurácia geral e por classe)
+3. **Seleção de Arquivo**: Menu gráfico para selecionar uma imagem para classificação
+4. **Classificação**: Classifica a imagem e mostra:
+   - Classe predita
+   - Confiança da predição
+   - Visualização com Grad-CAM destacando as áreas importantes
+   - Círculos vermelhos nas regiões que fazem a imagem pertencer à classe predita
+
+### Requisitos
+
+- Interface gráfica requer `tkinter` (geralmente incluído com Python)
+- Modelo treinado deve existir em `models/cnn_model.h5`
+- Dataset de teste deve existir em `data/test` para calcular métricas
+
+### Exemplo de Uso
+
+1. Treine o modelo primeiro:
+   ```bash
+   python3 -m src.presentation.main
+   ```
+
+2. Execute a interface gráfica:
+   ```bash
+   python3 -m src.presentation.classify_image
+   ```
+
+3. Na interface:
+   - O resumo do modelo será exibido automaticamente
+   - Clique em "📁 Procurar Arquivo..." para selecionar uma imagem
+   - Clique em "🔍 Classificar Imagem" para classificar
+   - Visualize o resultado com as áreas importantes destacadas
 
 ## Licença
 

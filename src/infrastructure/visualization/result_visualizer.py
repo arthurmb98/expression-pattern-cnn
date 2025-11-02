@@ -124,16 +124,16 @@ class ResultVisualizer(VisualizationRepository):
         heatmaps_pred: np.ndarray,
         heatmaps_true: np.ndarray,
         save_path: str,
-        num_images: int = 9
+        num_images: int = 8
     ):
         """Plota imagens de teste com overlays Grad-CAM duplos:
         - Vermelho: regiões que fazem o modelo classificar como classe predita
         - Verde: regiões que fazem a imagem pertencer à classe verdadeira"""
-        # Calcula grid size
-        n_cols = 3
-        n_rows = (num_images + n_cols - 1) // n_cols
+        # Calcula grid size para 8 imagens (2x4 ou 4x2)
+        n_cols = 4
+        n_rows = 2
         
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 5 * n_rows))
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(20, 10))
         axes = axes.flatten() if n_rows > 1 else [axes] if n_rows == 1 else axes
         
         for i in range(num_images):
@@ -152,31 +152,82 @@ class ResultVisualizer(VisualizationRepository):
             heatmap_true_norm = heatmap_true.astype(np.float32) / 255.0
             
             # Aplica threshold para destacar apenas as regiões mais importantes
-            threshold = 0.3
-            heatmap_pred_norm = np.where(heatmap_pred_norm > threshold, heatmap_pred_norm, 0)
-            heatmap_true_norm = np.where(heatmap_true_norm > threshold, heatmap_true_norm, 0)
+            threshold = 0.4
+            heatmap_pred_mask = heatmap_pred_norm > threshold
+            heatmap_true_mask = heatmap_true_norm > threshold
+            
+            # Encontra regiões importantes para desenhar círculos
+            from scipy import ndimage
+            
+            # Para heatmap predito (vermelho) - encontra centro das regiões importantes
+            if np.any(heatmap_pred_mask):
+                labeled_pred, num_features_pred = ndimage.label(heatmap_pred_mask)
+                if num_features_pred > 0:
+                    centers_pred = []
+                    for feature_id in range(1, num_features_pred + 1):
+                        coords = np.argwhere(labeled_pred == feature_id)
+                        if len(coords) > 0:
+                            center = coords.mean(axis=0).astype(int)
+                            centers_pred.append((center[1], center[0]))  # (x, y)
+            else:
+                centers_pred = []
+            
+            # Para heatmap verdadeiro (verde) - encontra centro das regiões importantes
+            if np.any(heatmap_true_mask):
+                labeled_true, num_features_true = ndimage.label(heatmap_true_mask)
+                if num_features_true > 0:
+                    centers_true = []
+                    for feature_id in range(1, num_features_true + 1):
+                        coords = np.argwhere(labeled_true == feature_id)
+                        if len(coords) > 0:
+                            center = coords.mean(axis=0).astype(int)
+                            centers_true.append((center[1], center[0]))  # (x, y)
+            else:
+                centers_true = []
             
             # Cria overlays coloridos mais vibrantes
             # Vermelho para classe predita
             overlay_pred = np.zeros_like(image)
-            overlay_pred[:, :, 0] = heatmap_pred_norm * 1.2  # Canal vermelho intensificado
-            overlay_pred[:, :, 1] = heatmap_pred_norm * 0.2  # Pouco verde
-            overlay_pred[:, :, 2] = heatmap_pred_norm * 0.1  # Muito pouco azul
+            overlay_pred[:, :, 0] = np.where(heatmap_pred_mask, heatmap_pred_norm * 1.5, 0)  # Canal vermelho intensificado
+            overlay_pred[:, :, 1] = np.where(heatmap_pred_mask, heatmap_pred_norm * 0.2, 0)  # Pouco verde
+            overlay_pred[:, :, 2] = np.where(heatmap_pred_mask, heatmap_pred_norm * 0.1, 0)  # Muito pouco azul
             
             # Verde para classe verdadeira
             overlay_true = np.zeros_like(image)
-            overlay_true[:, :, 0] = heatmap_true_norm * 0.2  # Pouco vermelho
-            overlay_true[:, :, 1] = heatmap_true_norm * 1.2  # Canal verde intensificado
-            overlay_true[:, :, 2] = heatmap_true_norm * 0.1  # Muito pouco azul
+            overlay_true[:, :, 0] = np.where(heatmap_true_mask, heatmap_true_norm * 0.2, 0)  # Pouco vermelho
+            overlay_true[:, :, 1] = np.where(heatmap_true_mask, heatmap_true_norm * 1.5, 0)  # Canal verde intensificado
+            overlay_true[:, :, 2] = np.where(heatmap_true_mask, heatmap_true_norm * 0.1, 0)  # Muito pouco azul
             
             # Combina imagem original com ambos os overlays
-            # A imagem original fica visível para contexto, mas os overlays destacam
-            overlayed = image * 0.6 + np.clip(overlay_pred, 0, 1) * 0.4 + np.clip(overlay_true, 0, 1) * 0.4
+            overlayed = image * 0.5 + np.clip(overlay_pred, 0, 1) * 0.5 + np.clip(overlay_true, 0, 1) * 0.5
             overlayed = np.clip(overlayed, 0, 1)  # Garante valores entre 0 e 1
             
             # Plota
             axes[i].imshow(overlayed)
             axes[i].axis('off')
+            
+            # Desenha círculos nas regiões importantes
+            img_height, img_width = image.shape[:2]
+            
+            # Círculos vermelhos para classe predita (apenas as 2 maiores regiões)
+            if len(centers_pred) > 0:
+                # Ordena por tamanho da região (aproximado)
+                centers_sorted = sorted(centers_pred, key=lambda c: heatmap_pred_norm[c[1], c[0]], reverse=True)[:2]
+                for center_x, center_y in centers_sorted:
+                    # Calcula raio baseado no tamanho da região
+                    radius = max(15, min(30, int(img_width * 0.1)))
+                    circle = plt.Circle((center_x, center_y), radius, fill=False, 
+                                      edgecolor='red', linewidth=3, linestyle='--', alpha=0.8)
+                    axes[i].add_patch(circle)
+            
+            # Círculos verdes para classe verdadeira (apenas as 2 maiores regiões)
+            if len(centers_true) > 0:
+                centers_sorted = sorted(centers_true, key=lambda c: heatmap_true_norm[c[1], c[0]], reverse=True)[:2]
+                for center_x, center_y in centers_sorted:
+                    radius = max(15, min(30, int(img_width * 0.1)))
+                    circle = plt.Circle((center_x, center_y), radius, fill=False, 
+                                      edgecolor='green', linewidth=3, linestyle='-', alpha=0.8)
+                    axes[i].add_patch(circle)
             
             # Adiciona título com informações
             true_class = class_names[true_label] if true_label < len(class_names) else f"Classe {true_label}"

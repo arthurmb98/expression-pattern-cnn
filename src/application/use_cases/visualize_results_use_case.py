@@ -3,6 +3,7 @@ from typing import List
 
 import numpy as np
 from PIL import Image, ImageFile
+from sklearn.metrics import confusion_matrix
 
 # Habilita carregamento de imagens truncadas
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -139,12 +140,63 @@ class VisualizeResultsUseCase:
             save_path="results/confusion_matrix.png"
         )
         
-        # Gera heatmaps Grad-CAM para algumas imagens
-        selected_indices = np.random.choice(
-            len(X_test),
-            size=min(num_images_to_plot, len(X_test)),
-            replace=False
-        )
+        # Gera heatmaps Grad-CAM para 8 imagens (4 de cada classe)
+        # Seleciona imagens baseado na taxa de acerto de cada classe
+        num_images_per_class = 4
+        selected_indices = []
+        
+        # Calcula taxa de acerto por classe
+        cm = confusion_matrix(true_classes, pred_classes)
+        class_accuracies = {}
+        for i, class_name in enumerate(classes):
+            if i < len(cm):
+                correct = cm[i, i] if i < len(cm[i]) else 0
+                total = sum(cm[i]) if i < len(cm) else 0
+                accuracy = (correct / total * 100) if total > 0 else 0.0
+                class_accuracies[i] = accuracy
+        
+        # Para cada classe, seleciona 4 imagens baseado na taxa de acerto
+        for class_idx, class_name in enumerate(classes):
+            # Encontra todas as imagens desta classe
+            class_mask = true_classes == class_idx
+            class_indices = np.where(class_mask)[0]
+            
+            if len(class_indices) == 0:
+                continue
+            
+            # Separa em corretas e erradas
+            correct_indices = [idx for idx in class_indices if pred_classes[idx] == true_classes[idx]]
+            incorrect_indices = [idx for idx in class_indices if pred_classes[idx] != true_classes[idx]]
+            
+            # Calcula quantas mostrar de cada tipo baseado na taxa de acerto
+            accuracy = class_accuracies.get(class_idx, 0.0)
+            num_correct = max(1, round(num_images_per_class * accuracy / 100.0))
+            num_incorrect = num_images_per_class - num_correct
+            
+            # Seleciona imagens corretas
+            if len(correct_indices) > 0:
+                num_correct = min(num_correct, len(correct_indices))
+                np.random.seed(42)  # Para reprodutibilidade
+                selected_correct = np.random.choice(correct_indices, size=num_correct, replace=False)
+                selected_indices.extend(selected_correct)
+            
+            # Seleciona imagens incorretas
+            if len(incorrect_indices) > 0 and num_incorrect > 0:
+                num_incorrect = min(num_incorrect, len(incorrect_indices))
+                np.random.seed(42)  # Para reprodutibilidade
+                selected_incorrect = np.random.choice(incorrect_indices, size=num_incorrect, replace=False)
+                selected_indices.extend(selected_incorrect)
+            
+            # Se não tem o suficiente, completa com aleatórias da classe
+            class_selected_count = len([idx for idx in selected_indices if true_classes[idx] == class_idx])
+            if class_selected_count < num_images_per_class:
+                remaining_needed = num_images_per_class - class_selected_count
+                remaining_class_indices = [idx for idx in class_indices if idx not in selected_indices]
+                if len(remaining_class_indices) > 0:
+                    num_to_add = min(remaining_needed, len(remaining_class_indices))
+                    np.random.seed(42 + class_idx)  # Seed diferente para cada classe
+                    additional = np.random.choice(remaining_class_indices, size=num_to_add, replace=False)
+                    selected_indices.extend(list(additional))
         
         selected_images = X_test[selected_indices]
         selected_true = true_classes[selected_indices]
@@ -210,3 +262,31 @@ class VisualizeResultsUseCase:
                 save_path="results/test_images_gradcam.png",
                 num_images=len(selected_images)
             )
+        
+        # Imprime resumo final dos resultados
+        print("\n" + "="*70)
+        print("📊 RESUMO FINAL DOS RESULTADOS")
+        print("="*70)
+        
+        from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+        accuracy = accuracy_score(true_classes, pred_classes)
+        precision, recall, f1, support = precision_recall_fscore_support(
+            true_classes, pred_classes, zero_division=0
+        )
+        
+        print(f"\n🎯 ACURÁCIA GERAL: {accuracy*100:.2f}%")
+        print(f"\n📈 MÉTRICAS POR CLASSE:")
+        
+        for i, class_name in enumerate(classes):
+            if i < len(precision):
+                print(f"\n  {class_name}:")
+                print(f"    • Taxa de Acerto: {recall[i]*100:.2f}% ({int(recall[i]*support[i])}/{int(support[i])} corretas)")
+                print(f"    • Precisão:       {precision[i]*100:.2f}%")
+                print(f"    • F1-Score:       {f1[i]*100:.2f}%")
+        
+        print(f"\n📁 Arquivos gerados:")
+        print(f"  ✓ results/training_history.png")
+        print(f"  ✓ results/confusion_matrix.png")
+        print(f"  ✓ results/test_images_gradcam.png")
+        print(f"  ✓ models/cnn_model.h5")
+        print("\n" + "="*70 + "\n")
